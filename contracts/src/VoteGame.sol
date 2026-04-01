@@ -32,8 +32,7 @@ contract VoteGame {
     uint8 public constant OWNER_FEE_PERCENT = 10;     // オーナー手数料 10%
 
     // コントラクトのオーナー（デプロイした人）
-    // immutable = デプロイ時に設定され、以後変更不可
-    address public immutable owner;
+    address public owner;
 
     // オーナーが引き出せる手数料の残高
     uint256 public ownerBalance;
@@ -174,6 +173,13 @@ contract VoteGame {
 
         (bool success, ) = owner.call{value: amount}("");
         require(success, "Transfer failed");
+    }
+
+    // オーナーを別のアドレスに変更する
+    function transferOwnership(address newOwner) external {
+        require(msg.sender == owner, "Only owner");
+        require(newOwner != address(0), "Invalid address");
+        owner = newOwner;
     }
 
     // --- 読み取り用の関数 ---

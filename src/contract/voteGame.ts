@@ -1,5 +1,5 @@
 // コントラクトのアドレス（デプロイ後に更新する）
-export const VOTE_GAME_ADDRESS = "0x3a0077dbDb075Fa5f48FE34C9a2C89beFa2C0B28" as const;
+export const VOTE_GAME_ADDRESS = (process.env.NEXT_PUBLIC_VOTE_GAME_ADDRESS ?? "0x0000000000000000000000000000000000000000") as `0x${string}`;
 
 // コントラクトのABI（API仕様書のようなもの）
 // フロントエンドはこれを見て、どの関数を呼べるか・引数は何かを知る

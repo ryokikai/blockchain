@@ -1,6 +1,8 @@
 "use client";
 
-import { createPublicClient, http } from "viem";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
+import Link from "next/link";
+import { createPublicClient, createWalletClient, custom, http, formatEther } from "viem";
 import { baseSepolia } from "viem/chains";
 import { useState, useEffect, useCallback } from "react";
 import { VOTE_GAME_ABI, VOTE_GAME_ADDRESS } from "@/contract/voteGame";
@@ -34,10 +36,13 @@ type Vote = {
 };
 
 export default function ResultsPage() {
+  const { authenticated } = usePrivy();
+  const { wallets } = useWallets();
   const [votes, setVotes] = useState<Vote[]>([]);
   const [treasureX, setTreasureX] = useState(0);
   const [treasureY, setTreasureY] = useState(0);
   const [winner, setWinner] = useState<string | null>(null);
+  const [pool, setPool] = useState<bigint>(0n);
   const [charX, setCharX] = useState(5);
   const [charY, setCharY] = useState(5);
   const [currentStep, setCurrentStep] = useState(0);
@@ -45,6 +50,8 @@ export default function ResultsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [roundId, setRoundId] = useState<bigint | null>(null);
+  const [isClaiming, setIsClaiming] = useState(false);
+  const [claimStatus, setClaimStatus] = useState<string | null>(null);
 
   // 前のラウンドのデータを取得
   const fetchRoundData = useCallback(async () => {
@@ -63,8 +70,8 @@ export default function ResultsPage() {
       const prevRound = currentRound - 1n;
       setRoundId(prevRound);
 
-      // 投票データ、宝箱位置、winnerを並列で取得
-      const [roundVotes, treasurePos, roundWinner] = await Promise.all([
+      // 投票データ、宝箱位置、winner、プールを並列で取得
+      const [roundVotes, treasurePos, roundWinner, roundPool] = await Promise.all([
         publicClient.readContract({
           address: VOTE_GAME_ADDRESS,
           abi: VOTE_GAME_ABI,
@@ -83,6 +90,12 @@ export default function ResultsPage() {
           functionName: "getRoundWinner",
           args: [prevRound],
         }),
+        publicClient.readContract({
+          address: VOTE_GAME_ADDRESS,
+          abi: VOTE_GAME_ABI,
+          functionName: "getRoundPool",
+          args: [prevRound],
+        }),
       ]);
 
       const typedVotes = roundVotes as Array<{
@@ -96,6 +109,7 @@ export default function ResultsPage() {
       setVotes(typedVotes);
       setTreasureX(tx);
       setTreasureY(ty);
+      setPool(roundPool as bigint);
       setWinner(
         winnerAddr === "0x0000000000000000000000000000000000000000"
           ? null
@@ -175,9 +189,14 @@ export default function ResultsPage() {
         Round {roundId?.toString()} Results
       </h1>
 
-      <p className="text-sm text-zinc-500">
-        {votes.length} votes · {winner ? `Winner: ${winner.slice(0, 6)}...${winner.slice(-4)}` : "No winner"}
-      </p>
+      <div className="text-center text-sm text-zinc-500">
+        <p>{votes.length} votes · Prize pool: {formatEther(pool)} ETH</p>
+        <p>
+          {winner
+            ? `Winner: ${winner.slice(0, 6)}...${winner.slice(-4)}`
+            : "No winner this round"}
+        </p>
+      </div>
 
       {/* Grid */}
       <div
@@ -264,13 +283,60 @@ export default function ResultsPage() {
         </div>
       )}
 
+      {/* Claim Prize */}
+      {winner &&
+        authenticated &&
+        wallets.some(
+          (w) => w.address.toLowerCase() === winner.toLowerCase()
+        ) && (
+          <div className="text-center">
+            <button
+              onClick={async () => {
+                try {
+                  setIsClaiming(true);
+                  setClaimStatus(null);
+                  const wallet = wallets.find(
+                    (w) => w.address.toLowerCase() === winner.toLowerCase()
+                  )!;
+                  const provider = await wallet.getEthereumProvider();
+                  const walletClient = createWalletClient({
+                    chain: baseSepolia,
+                    transport: custom(provider),
+                  });
+                  const hash = await walletClient.writeContract({
+                    address: VOTE_GAME_ADDRESS,
+                    abi: VOTE_GAME_ABI,
+                    functionName: "claimPrize",
+                    args: [roundId!],
+                    account: wallet.address as `0x${string}`,
+                  });
+                  await publicClient.waitForTransactionReceipt({ hash });
+                  setClaimStatus("Prize claimed!");
+                } catch (err) {
+                  console.error(err);
+                  setClaimStatus("Failed to claim prize.");
+                } finally {
+                  setIsClaiming(false);
+                }
+              }}
+              disabled={isClaiming}
+              className="rounded-full bg-green-500 px-6 py-2 text-white hover:bg-green-600 disabled:opacity-50"
+            >
+              {isClaiming ? "Claiming..." : `Claim ${formatEther(pool)} ETH`}
+            </button>
+            {claimStatus && (
+              <p className="mt-2 text-sm text-green-600">{claimStatus}</p>
+            )}
+          </div>
+        )}
+
       {/* Back to vote */}
-      <a
+      <Link
         href="/"
         className="text-sm text-blue-500 hover:underline"
       >
         Back to voting
-      </a>
+      </Link>
     </div>
   );
 }

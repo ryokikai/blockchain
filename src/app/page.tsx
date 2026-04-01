@@ -1,6 +1,7 @@
 "use client";
 
 import { usePrivy, useWallets } from "@privy-io/react-auth";
+import Link from "next/link";
 import { createPublicClient, createWalletClient, custom, http, parseEther } from "viem";
 import { baseSepolia } from "viem/chains";
 import { useState, useEffect } from "react";
@@ -174,12 +175,12 @@ export default function Home() {
       </div>
 
       {/* Link to results */}
-      <a
+      <Link
         href="/results"
         className="text-sm text-blue-500 hover:underline"
       >
         View previous round results
-      </a>
+      </Link>
     </div>
   );
 }
