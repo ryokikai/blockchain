@@ -3,8 +3,11 @@
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { createPublicClient, createWalletClient, custom, http, parseEther } from "viem";
 import { baseSepolia } from "viem/chains";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import { VOTE_GAME_ABI, VOTE_GAME_ADDRESS } from "@/contract/voteGame";
+import { ArrowBigUp, ArrowBigDown, ArrowBigLeft, ArrowBigRight } from "lucide-react";
+import { formatRoundTime, getCurrentRoundId } from "@/lib/utils";
 
 const Direction = { Up: 0, Down: 1, Left: 2, Right: 3 } as const;
 
@@ -33,7 +36,7 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  async function handleVote(direction: number, label: string) {
+  const handleVote = useCallback(async (direction: number, label: string) => {
     try {
       setIsVoting(true);
       setLastVote(null);
@@ -74,7 +77,29 @@ export default function Home() {
     } finally {
       setIsVoting(false);
     }
-  }
+  }, [walletsReady, wallets]);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (isVoting || !authenticated) return;
+
+      const keyMap: Record<string, [number, string]> = {
+        ArrowUp: [Direction.Up, "Up"],
+        ArrowDown: [Direction.Down, "Down"],
+        ArrowLeft: [Direction.Left, "Left"],
+        ArrowRight: [Direction.Right, "Right"],
+      };
+
+      const match = keyMap[e.key];
+      if (match) {
+        e.preventDefault();
+        handleVote(match[0], match[1]);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isVoting, authenticated, handleVote]);
 
   if (!privyReady) {
     return <div className="flex flex-1 items-center justify-center" />;
@@ -91,19 +116,26 @@ export default function Home() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-8">
-      <h1 className="text-2xl font-bold">Vote</h1>
+      <h1 className="text-2xl font-bold">Help Kai find the treasure!</h1>
 
       {/* Timer */}
       <div className="text-center">
+        <p className="text-sm text-zinc-500">
+          Round {formatRoundTime(getCurrentRoundId())}
+        </p>
         <p className="text-4xl font-mono font-bold">
           {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, "0")}
         </p>
-        <p className="text-sm text-zinc-500">until round ends</p>
       </div>
 
       {/* Status */}
-      {isVoting && <p className="text-sm text-blue-500">Sending vote...</p>}
-      {lastVote && <p className="text-sm text-green-600">{lastVote}</p>}
+      <p className="h-5 text-sm font-medium">
+        {isVoting ? (
+          <span className="text-sky-500">Sending vote...</span>
+        ) : lastVote ? (
+          <span className={lastVote.includes("failed") ? "text-red-500" : "text-green-600"}>{lastVote}</span>
+        ) : null}
+      </p>
 
       {/* Direction buttons */}
       <div className="grid grid-cols-3 gap-2">
@@ -111,35 +143,37 @@ export default function Home() {
         <button
           onClick={() => handleVote(Direction.Up, "Up")}
           disabled={isVoting}
-          className="flex h-16 w-16 items-center justify-center rounded-lg bg-blue-500 text-2xl text-white hover:bg-blue-600 disabled:opacity-50"
+          className="flex h-16 w-16 items-center justify-center rounded-lg bg-orange-400 text-2xl text-white hover:bg-orange-500 disabled:opacity-50"
         >
-          ↑
+          <ArrowBigUp size={28} fill="white" />
         </button>
         <div />
 
         <button
           onClick={() => handleVote(Direction.Left, "Left")}
           disabled={isVoting}
-          className="flex h-16 w-16 items-center justify-center rounded-lg bg-blue-500 text-2xl text-white hover:bg-blue-600 disabled:opacity-50"
+          className="flex h-16 w-16 items-center justify-center rounded-lg bg-orange-400 text-white hover:bg-orange-500 disabled:opacity-50"
         >
-          ←
+          <ArrowBigLeft size={28} fill="white" />
         </button>
-        <div />
+        <div className="flex items-center justify-center">
+          <Image src="/images/kai.png" alt="Kai" width={56} height={56} />
+        </div>
         <button
           onClick={() => handleVote(Direction.Right, "Right")}
           disabled={isVoting}
-          className="flex h-16 w-16 items-center justify-center rounded-lg bg-blue-500 text-2xl text-white hover:bg-blue-600 disabled:opacity-50"
+          className="flex h-16 w-16 items-center justify-center rounded-lg bg-orange-400 text-white hover:bg-orange-500 disabled:opacity-50"
         >
-          →
+          <ArrowBigRight size={28} fill="white" />
         </button>
 
         <div />
         <button
           onClick={() => handleVote(Direction.Down, "Down")}
           disabled={isVoting}
-          className="flex h-16 w-16 items-center justify-center rounded-lg bg-blue-500 text-2xl text-white hover:bg-blue-600 disabled:opacity-50"
+          className="flex h-16 w-16 items-center justify-center rounded-lg bg-orange-400 text-white hover:bg-orange-500 disabled:opacity-50"
         >
-          ↓
+          <ArrowBigDown size={28} fill="white" />
         </button>
         <div />
       </div>

@@ -1,11 +1,13 @@
 "use client";
 
 import { usePrivy, useWallets } from "@privy-io/react-auth";
-import Link from "next/link";
+import Image from "next/image";
 import { createPublicClient, createWalletClient, custom, http, formatEther } from "viem";
 import { baseSepolia } from "viem/chains";
 import { useState, useEffect, useCallback } from "react";
 import { VOTE_GAME_ABI, VOTE_GAME_ADDRESS } from "@/contract/voteGame";
+
+import { formatRoundTime } from "@/lib/utils";
 
 const GRID_SIZE = 11;
 
@@ -184,23 +186,25 @@ export default function ResultsPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6">
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 sm:gap-6">
       <h1 className="text-2xl font-bold">
-        Round {roundId?.toString()} Results
+        Round {roundId != null ? formatRoundTime(roundId) : ""} Results
       </h1>
 
-      <div className="text-center text-sm text-zinc-500">
-        <p>{votes.length} votes · Prize pool: {formatEther(pool)} ETH</p>
-        <p>
-          {winner
-            ? `Winner: ${winner.slice(0, 6)}...${winner.slice(-4)}`
-            : "No winner this round"}
+      <div className="text-center text-sm">
+        <p className="text-zinc-500">{votes.length} votes · Prize pool: {formatEther(pool)} ETH</p>
+        <p className="h-5 text-foreground font-bold">
+          {currentStep >= votes.length && votes.length > 0
+            ? winner
+              ? `Winner: ${winner.slice(0, 6)}...${winner.slice(-4)} 🏆`
+              : "No winner this round :("
+            : null}
         </p>
       </div>
 
       {/* Grid */}
       <div
-        className="grid gap-0 border border-zinc-300 dark:border-zinc-700"
+        className="grid gap-0 border border-zinc-300"
         style={{
           gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`,
         }}
@@ -214,39 +218,21 @@ export default function ResultsPage() {
           return (
             <div
               key={i}
-              className={`flex h-8 w-8 items-center justify-center border border-zinc-200 text-sm dark:border-zinc-800 ${
+              className={`relative flex h-8 w-8 items-center justify-center border border-zinc-200 text-sm ${
                 isCharacter && isTreasure
                   ? "bg-green-400"
-                  : isCharacter
-                    ? "bg-blue-400"
-                    : isTreasure
-                      ? "bg-yellow-400"
-                      : ""
+                  : ""
               }`}
             >
-              {isCharacter && isTreasure
-                ? "★"
-                : isCharacter
-                  ? "●"
-                  : isTreasure
-                    ? "◆"
-                    : ""}
+              {isTreasure && (
+                <Image src="/images/treasure.png" alt="Treasure" width={28} height={28} className="absolute z-0" />
+              )}
+              {isCharacter && (
+                <Image src="/images/kai.png" alt="Kai" width={28} height={28} className="absolute z-10" />
+              )}
             </div>
           );
         })}
-      </div>
-
-      {/* Legend */}
-      <div className="flex gap-6 text-sm">
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-3 w-3 bg-blue-400" /> Character
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-3 w-3 bg-yellow-400" /> Treasure
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-3 w-3 bg-green-400" /> Found!
-        </span>
       </div>
 
       {/* Controls */}
@@ -259,29 +245,35 @@ export default function ResultsPage() {
             setIsPlaying(true);
           }}
           disabled={votes.length === 0}
-          className="rounded-full bg-black px-6 py-2 text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+          className="rounded-full bg-orange-400 font-bold px-6 py-2 text-white hover:bg-orange-500 disabled:opacity-50"
         >
           {currentStep > 0 ? "Replay" : "Play"}
         </button>
-        <p className="text-sm text-zinc-500">
-          Step {currentStep} / {votes.length}
-        </p>
       </div>
 
-      {/* Vote log */}
-      {currentStep > 0 && (
-        <div className="max-h-40 w-64 overflow-y-auto rounded border border-zinc-200 p-2 text-xs dark:border-zinc-800">
-          {votes.slice(0, currentStep).map((v, i) => (
-            <div key={i} className="flex justify-between py-0.5">
-              <span className="text-zinc-500">#{i + 1}</span>
-              <span>{DIRECTION_LABEL[v.direction]}</span>
-              <span className="text-zinc-400">
-                {v.voter.slice(0, 6)}...
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Vote log - toast style */}
+      <div className="fixed left-4 top-16 z-50">
+        {votes
+          .slice(0, currentStep)
+          .reverse()
+          .slice(0, 5)
+          .map((v, i) => {
+            const originalIndex = votes.indexOf(v);
+            return (
+              <div
+                key={originalIndex}
+                className="absolute left-0 flex w-36 justify-between rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs shadow-md transition-[top,opacity] duration-300 ease-out animate-[slideDown_300ms_ease-out]"
+                style={{ top: `${i * 36}px`, opacity: 1 - i * 0.2 }}
+              >
+                <span className="font-medium text-zinc-500">#{originalIndex + 1}</span>
+                <span className="font-semibold">{DIRECTION_LABEL[v.direction]}</span>
+                <span className="text-zinc-400">
+                  {v.voter.slice(0, 6)}...
+                </span>
+              </div>
+            );
+          })}
+      </div>
 
       {/* Claim Prize */}
       {winner &&
@@ -320,7 +312,7 @@ export default function ResultsPage() {
                 }
               }}
               disabled={isClaiming}
-              className="rounded-full bg-green-500 px-6 py-2 text-white hover:bg-green-600 disabled:opacity-50"
+              className="rounded-full bg-green-500 px-6 py-2 font-bold text-white hover:bg-green-600 disabled:opacity-50"
             >
               {isClaiming ? "Claiming..." : `Claim ${formatEther(pool)} ETH`}
             </button>
@@ -328,15 +320,7 @@ export default function ResultsPage() {
               <p className="mt-2 text-sm text-green-600">{claimStatus}</p>
             )}
           </div>
-        )}
-
-      {/* Back to vote */}
-      <Link
-        href="/"
-        className="text-sm text-blue-500 hover:underline"
-      >
-        Back to voting
-      </Link>
+        )} 
     </div>
   );
 }

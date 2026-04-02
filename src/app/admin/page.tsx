@@ -118,7 +118,7 @@ export default function AdminPage() {
       <div className="flex flex-1 flex-col items-center justify-center gap-4">
         <h1 className="text-2xl font-bold">Access Denied</h1>
         <p className="text-zinc-500">You are not the contract owner.</p>
-        <Link href="/" className="text-sm text-blue-500 hover:underline">
+        <Link href="/" className="text-sm text-sky-500 hover:underline">
           Back to voting
         </Link>
       </div>
@@ -130,7 +130,7 @@ export default function AdminPage() {
     <div className="flex flex-1 flex-col items-center justify-center gap-6">
       <h1 className="text-2xl font-bold">Admin Panel</h1>
 
-      <div className="w-80 rounded-lg border border-zinc-200 p-6 dark:border-zinc-800">
+      <div className="w-80 rounded-lg border border-zinc-200 p-6">
         <div className="mb-4">
           <p className="text-sm text-zinc-500">Owner Address</p>
           <p className="font-mono text-sm">
@@ -146,7 +146,7 @@ export default function AdminPage() {
         <button
           onClick={handleWithdraw}
           disabled={isWithdrawing || ownerBalance === 0n}
-          className="w-full rounded-full bg-black px-6 py-2 text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+          className="w-full rounded-full bg-black px-6 py-2 text-white hover:bg-zinc-800 disabled:opacity-50"
         >
           {isWithdrawing
             ? "Withdrawing..."
@@ -167,7 +167,7 @@ export default function AdminPage() {
         <p className="font-mono text-xs">{VOTE_GAME_ADDRESS}</p>
       </div>
 
-      <Link href="/" className="text-sm text-blue-500 hover:underline">
+      <Link href="/" className="text-sm text-sky-500 hover:underline">
         Back to voting
       </Link>
     </div>
