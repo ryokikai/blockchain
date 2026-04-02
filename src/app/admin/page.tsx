@@ -1,6 +1,6 @@
 "use client";
 
-import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { usePrivy, useWallets } from  "@privy-io/react-auth";
 import Link from "next/link";
 import {
   createPublicClient,
@@ -19,7 +19,7 @@ const publicClient = createPublicClient({
 });
 
 export default function AdminPage() {
-  const { login, authenticated } = usePrivy();
+  const { authenticated } = usePrivy();
   const { wallets } = useWallets();
   const [owner, setOwner] = useState<string | null>(null);
   const [ownerBalance, setOwnerBalance] = useState<bigint>(0n);
@@ -103,18 +103,11 @@ export default function AdminPage() {
     );
   }
 
-  // 未ログイン
   if (!authenticated) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4">
         <h1 className="text-2xl font-bold">Admin</h1>
         <p className="text-zinc-500">Log in to access admin panel</p>
-        <button
-          onClick={login}
-          className="rounded-full bg-black px-6 py-2 text-white hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
-        >
-          Log In
-        </button>
       </div>
     );
   }

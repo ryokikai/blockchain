@@ -21,7 +21,7 @@ contract VoteGameTest is Test {
     // テスト1: 参加費なしでは投票できない
     function test_VoteRequiresFee() public {
         vm.prank(player1); // player1として実行
-        vm.expectRevert("Must send exactly 0.001 ETH");
+        vm.expectRevert("Must send exactly 0.0001 ETH");
         game.vote(VoteGame.Direction.Up); // 参加費なし → 失敗
     }
 
@@ -30,7 +30,7 @@ contract VoteGameTest is Test {
         uint256 roundId = game.getCurrentRound();
 
         vm.prank(player1);
-        game.vote{value: 0.001 ether}(VoteGame.Direction.Up);
+        game.vote{value: 0.0001 ether}(VoteGame.Direction.Up);
 
         assertEq(game.getRoundVoteCount(roundId), 1);
     }
@@ -40,15 +40,15 @@ contract VoteGameTest is Test {
         uint256 roundId = game.getCurrentRound();
 
         vm.prank(player1);
-        game.vote{value: 0.001 ether}(VoteGame.Direction.Up);
+        game.vote{value: 0.0001 ether}(VoteGame.Direction.Up);
 
         vm.prank(player2);
-        game.vote{value: 0.001 ether}(VoteGame.Direction.Down);
+        game.vote{value: 0.0001 ether}(VoteGame.Direction.Down);
 
-        // プール = 0.001 * 90% * 2 = 0.0018 ETH
-        assertEq(game.getRoundPool(roundId), 0.0018 ether);
-        // オーナー残高 = 0.001 * 10% * 2 = 0.0002 ETH
-        assertEq(game.ownerBalance(), 0.0002 ether);
+        // プール = 0.0001 * 90% * 2 = 0.00018 ETH
+        assertEq(game.getRoundPool(roundId), 0.00018 ether);
+        // オーナー残高 = 0.0001 * 10% * 2 = 0.00002 ETH
+        assertEq(game.ownerBalance(), 0.00002 ether);
     }
 
     // テスト4: キャラクターが正しく移動する
@@ -56,7 +56,7 @@ contract VoteGameTest is Test {
         uint256 roundId = game.getCurrentRound();
 
         vm.prank(player1);
-        game.vote{value: 0.001 ether}(VoteGame.Direction.Right);
+        game.vote{value: 0.0001 ether}(VoteGame.Direction.Right);
 
         (uint8 x, uint8 y) = game.getRoundCharacterPosition(roundId);
         assertEq(x, 6);
@@ -69,7 +69,7 @@ contract VoteGameTest is Test {
 
         for (uint8 i = 0; i < 6; i++) {
             vm.prank(player1);
-            game.vote{value: 0.001 ether}(VoteGame.Direction.Left);
+            game.vote{value: 0.0001 ether}(VoteGame.Direction.Left);
         }
 
         (uint8 x, uint8 y) = game.getRoundCharacterPosition(roundId);
@@ -83,7 +83,7 @@ contract VoteGameTest is Test {
 
         // 最初の投票でラウンド初期化
         vm.prank(player1);
-        game.vote{value: 0.001 ether}(VoteGame.Direction.Up);
+        game.vote{value: 0.0001 ether}(VoteGame.Direction.Up);
 
         (uint8 trsX, uint8 trsY) = game.getRoundTreasurePosition(roundId);
 
@@ -93,24 +93,24 @@ contract VoteGameTest is Test {
         if (trsX > startX) {
             for (uint8 i = 0; i < trsX - startX; i++) {
                 vm.prank(player1);
-                game.vote{value: 0.001 ether}(VoteGame.Direction.Right);
+                game.vote{value: 0.0001 ether}(VoteGame.Direction.Right);
             }
         } else if (trsX < startX) {
             for (uint8 i = 0; i < startX - trsX; i++) {
                 vm.prank(player1);
-                game.vote{value: 0.001 ether}(VoteGame.Direction.Left);
+                game.vote{value: 0.0001 ether}(VoteGame.Direction.Left);
             }
         }
 
         if (trsY > startY) {
             for (uint8 i = 0; i < trsY - startY; i++) {
                 vm.prank(player1);
-                game.vote{value: 0.001 ether}(VoteGame.Direction.Down);
+                game.vote{value: 0.0001 ether}(VoteGame.Direction.Down);
             }
         } else if (trsY < startY) {
             for (uint8 i = 0; i < startY - trsY; i++) {
                 vm.prank(player1);
-                game.vote{value: 0.001 ether}(VoteGame.Direction.Up);
+                game.vote{value: 0.0001 ether}(VoteGame.Direction.Up);
             }
         }
 
@@ -120,26 +120,26 @@ contract VoteGameTest is Test {
         // 到達後も投票可能
         uint256 countBefore = game.getRoundVoteCount(roundId);
         vm.prank(player2);
-        game.vote{value: 0.001 ether}(VoteGame.Direction.Up);
+        game.vote{value: 0.0001 ether}(VoteGame.Direction.Up);
         assertEq(game.getRoundVoteCount(roundId), countBefore + 1);
     }
 
     // テスト7: オーナーが手数料を引き出せる
     function test_OwnerWithdraw() public {
         vm.prank(player1);
-        game.vote{value: 0.001 ether}(VoteGame.Direction.Up);
+        game.vote{value: 0.0001 ether}(VoteGame.Direction.Up);
 
         uint256 ownerBalanceBefore = address(this).balance;
         game.withdrawOwnerFees(); // テストコントラクト = オーナー
         uint256 ownerBalanceAfter = address(this).balance;
 
-        assertEq(ownerBalanceAfter - ownerBalanceBefore, 0.0001 ether);
+        assertEq(ownerBalanceAfter - ownerBalanceBefore, 0.00001 ether);
     }
 
     // テスト8: オーナー以外は引き出せない
     function test_NonOwnerCannotWithdraw() public {
         vm.prank(player1);
-        game.vote{value: 0.001 ether}(VoteGame.Direction.Up);
+        game.vote{value: 0.0001 ether}(VoteGame.Direction.Up);
 
         vm.prank(player1);
         vm.expectRevert("Only owner");

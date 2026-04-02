@@ -28,7 +28,7 @@ contract VoteGame {
 
     uint8 public constant GRID_SIZE = 11;
     uint256 public constant ROUND_DURATION = 10 minutes;
-    uint256 public constant VOTE_FEE = 0.001 ether;  // 参加費
+    uint256 public constant VOTE_FEE = 0.0001 ether;  // 参加費
     uint8 public constant OWNER_FEE_PERCENT = 10;     // オーナー手数料 10%
 
     // コントラクトのオーナー（デプロイした人）
@@ -99,7 +99,7 @@ contract VoteGame {
     // payable = この関数はETHを受け取れる
     function vote(Direction direction) external payable {
         // 参加費が正しいか確認
-        require(msg.value == VOTE_FEE, "Must send exactly 0.001 ETH");
+        require(msg.value == VOTE_FEE, "Must send exactly 0.0001 ETH");
 
         uint256 roundId = getCurrentRound();
         _initRound(roundId);
