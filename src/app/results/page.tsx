@@ -5,6 +5,7 @@ import Image from "next/image";
 import { createPublicClient, createWalletClient, custom, http, formatEther } from "viem";
 import { baseSepolia } from "viem/chains";
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { VOTE_GAME_ABI, VOTE_GAME_ADDRESS } from "@/contract/voteGame";
 
 import { formatRoundTime } from "@/lib/utils";
@@ -40,6 +41,7 @@ type Vote = {
 export default function ResultsPage() {
   const { authenticated } = usePrivy();
   const { wallets } = useWallets();
+  const searchParams = useSearchParams();
   const [votes, setVotes] = useState<Vote[]>([]);
   const [treasureX, setTreasureX] = useState(0);
   const [treasureY, setTreasureY] = useState(0);
@@ -61,16 +63,20 @@ export default function ResultsPage() {
       setLoading(true);
       setError(null);
 
-      // 現在のラウンドIDを取得
-      const currentRound = (await publicClient.readContract({
-        address: VOTE_GAME_ADDRESS,
-        abi: VOTE_GAME_ABI,
-        functionName: "getCurrentRound",
-      })) as bigint;
-
-      // 前のラウンド
-      const prevRound = currentRound - 1n;
-      setRoundId(prevRound);
+      // URLパラメータからラウンドIDを取得、なければ前のラウンド
+      const roundParam = searchParams.get("round");
+      let targetRound: bigint;
+      if (roundParam) {
+        targetRound = BigInt(roundParam);
+      } else {
+        const currentRound = (await publicClient.readContract({
+          address: VOTE_GAME_ADDRESS,
+          abi: VOTE_GAME_ABI,
+          functionName: "getCurrentRound",
+        })) as bigint;
+        targetRound = currentRound - 1n;
+      }
+      setRoundId(targetRound);
 
       // 投票データ、宝箱位置、winner、プールを並列で取得
       const [roundVotes, treasurePos, roundWinner, roundPool] = await Promise.all([
@@ -78,25 +84,25 @@ export default function ResultsPage() {
           address: VOTE_GAME_ADDRESS,
           abi: VOTE_GAME_ABI,
           functionName: "getRoundVotes",
-          args: [prevRound],
+          args: [targetRound],
         }),
         publicClient.readContract({
           address: VOTE_GAME_ADDRESS,
           abi: VOTE_GAME_ABI,
           functionName: "getRoundTreasurePosition",
-          args: [prevRound],
+          args: [targetRound],
         }),
         publicClient.readContract({
           address: VOTE_GAME_ADDRESS,
           abi: VOTE_GAME_ABI,
           functionName: "getRoundWinner",
-          args: [prevRound],
+          args: [targetRound],
         }),
         publicClient.readContract({
           address: VOTE_GAME_ADDRESS,
           abi: VOTE_GAME_ABI,
           functionName: "getRoundPool",
-          args: [prevRound],
+          args: [targetRound],
         }),
       ]);
 
@@ -129,7 +135,7 @@ export default function ResultsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     fetchRoundData();

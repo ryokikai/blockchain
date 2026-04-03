@@ -1,182 +1,120 @@
 "use client";
 
 import { usePrivy, useWallets } from "@privy-io/react-auth";
-import { createPublicClient, createWalletClient, custom, http, parseEther } from "viem";
-import { baseSepolia } from "viem/chains";
-import { useState, useEffect, useCallback } from "react";
+import { Copy, Check } from "lucide-react";
 import Image from "next/image";
-import { VOTE_GAME_ABI, VOTE_GAME_ADDRESS } from "@/contract/voteGame";
-import { ArrowBigUp, ArrowBigDown, ArrowBigLeft, ArrowBigRight } from "lucide-react";
-import { formatRoundTime, getCurrentRoundId } from "@/lib/utils";
-
-const Direction = { Up: 0, Down: 1, Left: 2, Right: 3 } as const;
-
-const publicClient = createPublicClient({
-  chain: baseSepolia,
-  transport: http(),
-});
+import Link from "next/link";
+import { useState } from "react";
 
 export default function Home() {
-  const { ready: privyReady, authenticated } = usePrivy();
-  const { ready: walletsReady, wallets } = useWallets();
-  const [isVoting, setIsVoting] = useState(false);
-  const [lastVote, setLastVote] = useState<string | null>(null);
-  const [timeLeft, setTimeLeft] = useState(0);
+  const { ready, authenticated, login } = usePrivy();
+  const { wallets } = useWallets();
 
-  useEffect(() => {
-    function updateTimer() {
-      const now = Math.floor(Date.now() / 1000);
-      const roundDuration = 600;
-      const elapsed = now % roundDuration;
-      setTimeLeft(roundDuration - elapsed);
-    }
+  const embeddedWallet = wallets.find(
+    (w) => w.walletClientType === "privy"
+  );
 
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleVote = useCallback(async (direction: number, label: string) => {
-    try {
-      setIsVoting(true);
-      setLastVote(null);
-
-      if (!walletsReady) {
-        alert("Wallet is still loading. Please wait a moment and try again.");
-        return;
-      }
-
-      const embeddedWallet = wallets.find(
-        (wallet) => wallet.walletClientType === "privy"
-      ) || wallets[0];
-      if (!embeddedWallet) {
-        alert("Wallet not found. Please try logging out and in again.");
-        return;
-      }
-
-      const provider = await embeddedWallet.getEthereumProvider();
-      const walletClient = createWalletClient({
-        chain: baseSepolia,
-        transport: custom(provider),
-      });
-
-      const hash = await walletClient.writeContract({
-        address: VOTE_GAME_ADDRESS,
-        abi: VOTE_GAME_ABI,
-        functionName: "vote",
-        args: [direction],
-        value: parseEther("0.0001"),
-        account: embeddedWallet.address as `0x${string}`,
-      });
-
-      await publicClient.waitForTransactionReceipt({ hash });
-      setLastVote(`Voted ${label}!`);
-    } catch (error) {
-      console.error("Vote failed:", error);
-      setLastVote("Vote failed. Please try again.");
-    } finally {
-      setIsVoting(false);
-    }
-  }, [walletsReady, wallets]);
-
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (isVoting || !authenticated) return;
-
-      const keyMap: Record<string, [number, string]> = {
-        ArrowUp: [Direction.Up, "Up"],
-        ArrowDown: [Direction.Down, "Down"],
-        ArrowLeft: [Direction.Left, "Left"],
-        ArrowRight: [Direction.Right, "Right"],
-      };
-
-      const match = keyMap[e.key];
-      if (match) {
-        e.preventDefault();
-        handleVote(match[0], match[1]);
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isVoting, authenticated, handleVote]);
-
-  if (!privyReady) {
+  if (!ready) {
     return <div className="flex flex-1 items-center justify-center" />;
   }
 
-  if (!authenticated) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-6">
-        <h1 className="text-3xl font-bold">Kai&apos;s Treasure Hunt</h1>
-        <p className="text-zinc-500">Log in to join the vote</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-8">
-      <h1 className="text-2xl font-bold">Help Kai find the treasure!</h1>
-
-      {/* Timer */}
-      <div className="text-center">
-        <p className="text-sm text-zinc-500">
-          Round {formatRoundTime(getCurrentRoundId())}
+    <div className="flex flex-1 flex-col items-center justify-center gap-10 px-6 py-12">
+      {/* Hero */}
+      <div className="flex flex-col items-center gap-4 text-center">
+        <Image src="/images/kai.png" alt="Kai" width={120} height={120} />
+        <h1 className="text-3xl font-bold">Kai&apos;s Treasure Hunt</h1>
+        <p className="max-w-md text-zinc-500">
+          Every 10 minutes, a new adventure begins. Guide Kai to the treasure chest and win the prize pool!
         </p>
-        <p className="text-4xl font-mono font-bold">
-          {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, "0")}
-        </p>
+        {authenticated ? (
+          <Link
+            href="/vote"
+            className="rounded-full bg-orange-400 px-8 py-3 font-bold text-white hover:bg-orange-500 transition-colors duration-250"
+          >
+            Start Playing
+          </Link>
+        ) : (
+          <button
+            onClick={login}
+            className="rounded-full bg-orange-400 px-8 py-3 font-bold text-white hover:bg-orange-500 transition-colors duration-250"
+          >
+            Login to Play
+          </button>
+        )}
       </div>
 
-      {/* Status */}
-      <p className="h-5 text-sm font-medium">
-        {isVoting ? (
-          <span className="text-sky-500">Sending vote...</span>
-        ) : lastVote ? (
-          <span className={lastVote.includes("failed") ? "text-red-500" : "text-green-600"}>{lastVote}</span>
-        ) : null}
-      </p>
-
-      {/* Direction buttons */}
-      <div className="grid grid-cols-3 gap-2">
-        <div />
-        <button
-          onClick={() => handleVote(Direction.Up, "Up")}
-          disabled={isVoting}
-          className="flex h-16 w-16 items-center justify-center rounded-lg bg-orange-400 text-2xl text-white hover:bg-orange-500 disabled:opacity-50"
-        >
-          <ArrowBigUp size={28} fill="white" />
-        </button>
-        <div />
-
-        <button
-          onClick={() => handleVote(Direction.Left, "Left")}
-          disabled={isVoting}
-          className="flex h-16 w-16 items-center justify-center rounded-lg bg-orange-400 text-white hover:bg-orange-500 disabled:opacity-50"
-        >
-          <ArrowBigLeft size={28} fill="white" />
-        </button>
-        <div className="flex items-center justify-center">
-          <Image src="/images/kai.png" alt="Kai" width={56} height={56} />
+      {/* Account Info */}
+      {authenticated && embeddedWallet && (
+        <div className="w-full max-w-md rounded-lg border border-zinc-200 p-6">
+          <h2 className="mb-4 text-lg font-bold">Your Account</h2>
+          <div className="flex flex-col gap-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-zinc-500">Email</span>
+              <span>{embeddedWallet ? (
+                // Get email from Privy user
+                <EmailDisplay />
+              ) : "—"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-zinc-500">Wallet Address</span>
+              <span className="flex items-center gap-1 font-mono">
+                {embeddedWallet.address.slice(0, 6)}...{embeddedWallet.address.slice(-4)}
+                <CopyButton text={embeddedWallet.address} />
+              </span>
+            </div>
+          </div>
         </div>
-        <button
-          onClick={() => handleVote(Direction.Right, "Right")}
-          disabled={isVoting}
-          className="flex h-16 w-16 items-center justify-center rounded-lg bg-orange-400 text-white hover:bg-orange-500 disabled:opacity-50"
-        >
-          <ArrowBigRight size={28} fill="white" />
-        </button>
+      )}
 
-        <div />
-        <button
-          onClick={() => handleVote(Direction.Down, "Down")}
-          disabled={isVoting}
-          className="flex h-16 w-16 items-center justify-center rounded-lg bg-orange-400 text-white hover:bg-orange-500 disabled:opacity-50"
-        >
-          <ArrowBigDown size={28} fill="white" />
-        </button>
-        <div />
+      {/* How to Play */}
+      <div className="w-full max-w-md rounded-lg border border-zinc-200 p-6">
+        <h2 className="mb-4 text-lg font-bold">How to Play</h2>
+        <ol className="flex flex-col gap-3 text-sm text-zinc-600">
+          <li className="flex gap-3">
+            <span className="font-bold text-sky-500">1.</span>
+            <span>Log in with your email. A wallet is automatically created for you.</span>
+          </li>
+          <li className="flex gap-3">
+            <span className="font-bold text-sky-500">2.</span>
+            <span>Each round lasts 10 minutes. Vote to move Kai up, down, left, or right.</span>
+          </li>
+          <li className="flex gap-3">
+            <span className="font-bold text-sky-500">3.</span>
+            <span>Each vote costs 0.0001 ETH. You can vote as many times as you want.</span>
+          </li>
+          <li className="flex gap-3">
+            <span className="font-bold text-sky-500">4.</span>
+            <span>When the round ends, watch Kai move across the grid in the Results page.</span>
+          </li>
+          <li className="flex gap-3">
+            <span className="font-bold text-sky-500">5.</span>
+            <span>If Kai reaches the treasure chest, the voter who made the final move wins 90% of the prize pool!</span>
+          </li>
+        </ol>
       </div>
     </div>
+  );
+}
+
+function EmailDisplay() {
+  const { user } = usePrivy();
+  return <>{user?.email?.address || "—"}</>;
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <button
+      onClick={async () => {
+        await navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }}
+      className="text-zinc-400 hover:text-zinc-600"
+    >
+      {copied ? <Check size={14} /> : <Copy size={14} />}
+    </button>
   );
 }
