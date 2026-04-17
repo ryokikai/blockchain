@@ -32,6 +32,9 @@ export default function Header() {
             <Link href="/vote" className="text-foreground hover:text-black">
               Play
             </Link>
+            <Link href="/history" className="text-foreground hover:text-black">
+              History
+            </Link>
             <div
               className="relative"
               ref={dropdownRef}

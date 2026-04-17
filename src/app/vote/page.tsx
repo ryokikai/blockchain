@@ -8,8 +8,7 @@ import Image from "next/image";
 import { VOTE_GAME_ABI, VOTE_GAME_ADDRESS } from "@/contract/voteGame";
 import { ArrowBigUp, ArrowBigDown, ArrowBigLeft, ArrowBigRight } from "lucide-react";
 import { formatRoundTime, getCurrentRoundId } from "@/lib/utils";
-
-const Direction = { Up: 0, Down: 1, Left: 2, Right: 3 } as const;
+import { Direction } from "@/lib/types";
 
 const publicClient = createPublicClient({
   chain: baseSepolia,

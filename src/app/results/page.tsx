@@ -9,6 +9,7 @@ import { useSearchParams } from "next/navigation";
 import { VOTE_GAME_ABI, VOTE_GAME_ADDRESS } from "@/contract/voteGame";
 
 import { formatRoundTime } from "@/lib/utils";
+import { DIRECTION_LABEL } from "@/lib/types";
 
 const GRID_SIZE = 11;
 
@@ -23,13 +24,6 @@ const DIRECTION_DELTA: Record<number, { dx: number; dy: number }> = {
   1: { dx: 0, dy: 1 },  // Down
   2: { dx: -1, dy: 0 }, // Left
   3: { dx: 1, dy: 0 },  // Right
-};
-
-const DIRECTION_LABEL: Record<number, string> = {
-  0: "Up",
-  1: "Down",
-  2: "Left",
-  3: "Right",
 };
 
 type Vote = {

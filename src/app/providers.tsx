@@ -12,7 +12,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         loginMethods: ["email"],
         // 埋め込みウォレットを自動作成
         embeddedWallets: {
-          createOnLogin: "all-users",
+          ethereum: {
+            createOnLogin: "all-users",
+          },
         },
         // Base Sepolia テストネットを使用
         defaultChain: baseSepolia,
